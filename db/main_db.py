@@ -1,5 +1,6 @@
 from config import path_db
 from db import queries
+import datetime
 import sqlite3 
 
 def init_db():
@@ -9,14 +10,18 @@ def init_db():
     conn.commit() # Сохраняем изменения
     conn.close() # Закрываем соединение с базой данных
 
-def add_task(task):
-    conn = sqlite3.connect(path_db) # Соединяемся с базой данных
-    cursor = conn.cursor() # Создаем объект курсора для выполнения SQL-запросов
-    cursor.execute(queries.insert_task, (task, )) # Записываем задачу в таблицу
-    conn.commit() # Сохраняем изменения
-    task_id = cursor.lastrowid  # Получаем ID только что добавленной задачи
-    conn.close() # Закрываем соединение с базой данных
-    return task_id  # Возвращаем ID добавленной задачи
+def add_task(task_text, task_date=None):
+    if task_date is None:
+        task_date = datetime.datetime.now().isoformat()
+    
+    conn = sqlite3.connect(path_db)
+    cursor = conn.cursor()
+    cursor.execute(queries.insert_task, (task_text, task_date))
+    conn.commit()
+    task_id = cursor.lastrowid
+    conn.close()
+    
+    return task_id
 
 def update_task(task_id, new_task):
     conn = sqlite3.connect(path_db) # Соединяемся с базой данных
