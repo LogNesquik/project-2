@@ -6,19 +6,21 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.LIGHT
 
     task_list = ft.Column(spacing=25)
+    
+    filter_type = 'all'
 
     def load_tasks():
-        tasks = main_db.all_task()
         task_list.controls.clear()
 
-        for task in tasks:
-            task_id, task_text, task_date = task
-            task_list.controls.append(view_tasks(task_id, task_text, task_date))
+        for task_id, task_text, task_date, complited in main_db.all_task(filter_type):
+            task_list.controls.append(view_tasks(task_id=task_id, task_text=task_text, task_date=task_date, complited=complited))
 
-    def view_tasks(task_id, task_text, task_date):
+    def view_tasks(task_id, task_text, task_date, complited=None):
         formatted_date = datetime.datetime.fromisoformat(task_date).strftime("%d.%m.%Y %H:%M")
         task_field = ft.TextField(value=task_text, read_only=True, expand=True)
         date_display = ft.Text(formatted_date, color=ft.Colors.GREEN)
+
+        checkbox = ft.Checkbox(value=bool(complited), on_change=lambda e: toggle_task(task_id, e.control.value))
 
         def enable_edit(_):
             if task_field.read_only == True:
@@ -47,8 +49,13 @@ def main(page: ft.Page):
         save_button = ft.IconButton(ft.Icons.SAVE, on_click=save_task, disabled=True)
         delete_button = ft.IconButton(ft.Icons.DELETE, ft.Colors.RED, on_click=del_task)
 
-        return ft.Row([task_field, date_display, edit_button, save_button, delete_button])
-    
+        return ft.Row([checkbox, task_field, date_display, edit_button, save_button, delete_button])
+
+    def toggle_task(task_id, is_complited):
+        print(is_complited)
+        main_db.update_task(task_id=task_id, complited=int(is_complited))
+        load_tasks()
+
     def add_task_db(_):
         if task_input.value:
             task_text = task_input.value
@@ -62,13 +69,24 @@ def main(page: ft.Page):
             task_input.value = ""
 
     task_input = ft.TextField(label="Введите задачу", expand=True, on_submit=add_task_db)
-    
     task_add_button = ft.IconButton(ft.Icons.ADD, on_click=add_task_db)
 
-    input_row = ft.Row([task_input, task_add_button])
-    load_tasks()
+    def set_filter(filter_value):
+        nonlocal filter_type
+        filter_type = filter_value
+        load_tasks()
 
-    page.add(input_row, task_list)
+    filter_buttons = ft.Row([
+        ft.ElevatedButton('Все задачи', on_click=lambda e: set_filter('all'), icon=ft.Icons.CHECK_BOX),
+        ft.ElevatedButton('В работе', on_click=lambda e: set_filter('uncomplited'), icon=ft.Icons.WATCH_LATER),
+        ft.ElevatedButton('Готово', on_click=lambda e: set_filter('complited'), icon=ft.Icons.DONE)
+    ], alignment=ft.MainAxisAlignment.SPACE_EVENLY)
+
+
+    input_row = ft.Row([task_input, task_add_button])
+
+    page.add(input_row, filter_buttons, task_list)
+    load_tasks()
 
 if __name__ == '__main__':
     main_db.init_db()

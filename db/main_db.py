@@ -23,10 +23,16 @@ def add_task(task_text, task_date=None):
     
     return task_id
 
-def update_task(task_id, new_task):
+def update_task(task_id, new_task=None, complited=None):
     conn = sqlite3.connect(path_db) # Соединяемся с базой данных
-    cursor = conn.cursor() # Создаем 
-    cursor.execute(queries.update_task, (new_task, task_id))
+    cursor = conn.cursor() # Создаем
+
+    if new_task is not None:
+        cursor.execute(queries.update_task, (new_task, task_id))
+    elif complited is not None:
+        cursor.execute('UPDATE tasks SET complited = ? WHERE id = ?', (complited, task_id))
+    else:
+        print("Error DB")
     conn.commit()
     conn.close()
 
@@ -37,11 +43,16 @@ def del_task(task_id):
     conn.commit()
     conn.close()
 
-def all_task():
+def all_task(filter_type):
     conn = sqlite3.connect(path_db)
     cursor = conn.cursor()
-    cursor.execute(queries.select_task)
-    conn.commit()
+
+    if filter_type == 'all':
+        cursor.execute(queries.select_task)
+    elif filter_type == 'complited':
+        cursor.execute(queries.select_task_complited)
+    else:
+        cursor.execute(queries.select_task_uncomplited)
     tasks = cursor.fetchall() # получаем всес строчки котоыре есть
     conn.close()
     return tasks
